@@ -84,7 +84,62 @@ def astar(maze):
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
-    return []
+    start=maze.getStart()
+    objective=maze.getObjectives()
+    path=deque()
+    explored=deque()
+    frontier=deque()
+    parent={}
+    gdist={}
+    hdist={}
+    fdist={}
+    frontier.append(start)
+    gdist[start]=0
+    def heuristic(point1,point2):
+        return abs(point1[0]-point2[0])+abs(point1[1]-point2[1])
+    hdist[start]=heuristic(start,objective[0])
+    fdist[start]=gdist[start]+hdist[start]
+    while frontier:
+        temp=100000
+        for i in frontier:
+            if fdist[i]<temp:
+                temp=fdist[i] #getting minmium fdict value in frontier elements
+        for k in frontier:
+            if fdist[k]==temp:
+                V=k
+       # print('V=',V)
+       # print('frontier=',frontier)
+        frontier.remove(V)
+        for i in maze.getNeighbors(V[0],V[1]):
+            if maze.isValidMove(i[0],i[1])==True: 
+                if i==objective[0]:
+                    hdist[i]=heuristic(i,objective[0])
+                    gdist[i]=gdist[V]+1
+                    parent[i]=V
+                    break
+                else:
+                    temphdist=heuristic(i,V)
+                    tempgdist=gdist[V]+1
+                   # every i is V's neighbor
+                    if (i in frontier and fdist[i]<temphdist+tempgdist) or(i in explored and fdist[i]<tempgdist+temphdist):# 13:24 state number wrong change one frontier condition to below
+                        continue
+                    else:
+                        hdist[i]=heuristic(i,V)
+                        gdist[i]=gdist[V]+1
+                        fdist[i]=hdist[i]+gdist[i]
+                        parent[i]=V
+                        frontier.append(i)
+        explored.append(V)
+        #following pseudocode as much as I understood it on :https://www.geeksforgeeks.org/a-search-algorithm/
+    a=objective[0]
+    path.append(a)
+    while start not in path:
+        path.appendleft(parent[a])
+        a=parent[a]
+   # print('Path=',path)
+   # print('Validity', maze.isValidPath(path))
+    return list(path)
+    #return []
 
 def astar_corner(maze):
     """
