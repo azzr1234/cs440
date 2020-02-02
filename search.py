@@ -51,8 +51,6 @@ def bfs(maze):
         V=frontier.popleft()
         if V in explored:
             V=frontier.popleft()
-    #    print('V=',V)
-    #    print('explored=',explored)
         if V==objective[0]:#objective in the form of [(5,1)]
             explored.append(V)
             break    
@@ -60,20 +58,14 @@ def bfs(maze):
             for i in set(maze.getNeighbors(V[0],V[1])):
                 if maze.isValidMove(i[0],i[1])==True and i not in explored:#can lead to infinite loop
                     frontier.append(i)
-                    parent[i]=V#键是子，值是母
-    #        print('Frontier=',frontier)
+                    parent[i]=V#key is son,value is parent
             explored.append(V)
-    #print('parent=',parent)
     a=objective[0]
     path.append(a)
     while start not in path:
         path.appendleft(parent[a])
         a=parent[a]
-    #print('Path=',path)
-    #print('Validity', maze.isValidPath(path))
     return list(path)
-    #return []
-
 
 def astar(maze):
     """
@@ -84,6 +76,7 @@ def astar(maze):
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
+     #following pseudocode as much as I understood it on :https://www.geeksforgeeks.org/a-search-algorithm/ and http://coecsl.ece.illinois.edu/ge423/lecturenotes/AstarHandOut.pdf
     start=maze.getStart()
     objective=maze.getObjectives()
     path=deque()
@@ -104,42 +97,52 @@ def astar(maze):
         for i in frontier:
             if fdist[i]<temp:
                 temp=fdist[i] #getting minmium fdict value in frontier elements
+            else:
+                temp=temp
         for k in frontier:
             if fdist[k]==temp:
                 V=k
-       # print('V=',V)
-       # print('frontier=',frontier)
+                break
         frontier.remove(V)
-        for i in maze.getNeighbors(V[0],V[1]):
-            if maze.isValidMove(i[0],i[1])==True: 
-                if i==objective[0]:
-                    hdist[i]=heuristic(i,objective[0])
-                    gdist[i]=gdist[V]+1
-                    parent[i]=V
-                    break
-                else:
-                    temphdist=heuristic(i,V)
-                    tempgdist=gdist[V]+1
-                   # every i is V's neighbor
-                    if (i in frontier and fdist[i]<temphdist+tempgdist) or(i in explored and fdist[i]<tempgdist+temphdist):# 13:24 state number wrong change one frontier condition to below
-                        continue
-                    else:
-                        hdist[i]=heuristic(i,V)
-                        gdist[i]=gdist[V]+1
-                        fdist[i]=hdist[i]+gdist[i]
-                        parent[i]=V
-                        frontier.append(i)
+        if V in explored:
+            continue
         explored.append(V)
-        #following pseudocode as much as I understood it on :https://www.geeksforgeeks.org/a-search-algorithm/
+        #if the objective judgement is written in the loop of neighbor handlement, the states explored will increase around 100 in the bigMaze, found by trial-and-error
+        if V==objective[0]:
+            parent[V]=Last
+            break
+        for i in set(maze.getNeighbors(V[0],V[1])):#get Neighbors already contained isValidMove
+            if i not in explored: # every i is a neighbor of V, a child of parent V
+                temphdist=heuristic(i,objective[0])
+                tempgdist=gdist[V]+heuristic(i,V)#current cost to i(successor)
+                hdist[i]=temphdist
+                gdist[i]=tempgdist
+                if (i in frontier and fdist[i]<tempgdist+temphdist) :#explored doesn't need to be contained here since admissible heruistic mentioned by instructor in Piazza
+                    continue
+                else:
+                    fdist[i]=hdist[i]+gdist[i]
+                    parent[i]=V
+                    frontier.append(i)
+                    Last=V
+            else: 
+                continue
     a=objective[0]
     path.append(a)
     while start not in path:
         path.appendleft(parent[a])
         a=parent[a]
-   # print('Path=',path)
-   # print('Validity', maze.isValidPath(path))
     return list(path)
-    #return []
+
+
+
+
+
+
+                
+
+
+
+
 
 def astar_corner(maze):
     """
