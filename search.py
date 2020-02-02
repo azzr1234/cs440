@@ -141,6 +141,48 @@ def astar(maze):
                 
 
 
+def path_finder(start_point,objective_point,maze):
+    path=deque()
+    explored=deque()
+    parent={}
+    gdist={}
+    hdist={}
+    fdist={}
+    def heruistic_corner(point1,point2):
+        return max((point1[0]-point2[0]),abs(point1[1]-point2[1]))
+    gdist[start_point]=0
+    hdist[start_point]=heruistic_corner(start_point,objective_point)
+    fdist[start_point]=gdist[start_point]+hdist[start_point]
+    frontier=deque()
+    frontier.append(start_point)
+    while frontier:
+        #print('frontier=',frontier)
+        V=frontier.popleft()
+        if V in explored:
+            V=frontier.popleft()
+        #    print('enter explored')
+        if V==objective_point:#objective in the form of [(5,1)]
+            explored.append(V)
+            frontier=frontier
+        #    print('BEFORE ELSE V=',V)
+            break    
+        else:
+        #    print('V=',V)
+            for i in maze.getNeighbors(V[0],V[1]):
+                if maze.isValidMove(i[0],i[1])==True and i not in explored:#can lead to infinite loop
+                    frontier.append(i)
+                    parent[i]=V#key is son,value is parent
+        #        print('frontier in i loop',frontier)
+            explored.append(V)
+        #    print('explored',explored)
+    #print('finish while')
+    a=objective_point
+    path.append(a)
+    while start_point not in path:
+        path.appendleft(parent[a])
+        a=parent[a]
+    #print('list path=',path)
+    return list(path)
 
 
 
@@ -153,7 +195,27 @@ def astar_corner(maze):
     @return path: a list of tuples containing the coordinates of each state in the computed path
         """
     # TODO: Write your code here
-    return []
+    start=maze.getStart()
+    objective=maze.getObjectives()
+    fullpath=deque()
+    i=1
+    print('start=',start)
+    print('objectives are',objective)
+    while objective:
+        path=path_finder(start,objective.pop(),maze)# IT IS IN LIST FORM
+        #print('while loop path',path)
+        if i==1:
+            fullpath+=path
+        else:
+            fullpath+=path[1:]
+        #print('fullpath',fullpath)
+        start=fullpath[-1]
+        i+=1
+    print('fullpath=',fullpath)
+    return list(fullpath)
+
+
+
 
 def astar_multi(maze):
     """
