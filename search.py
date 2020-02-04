@@ -1,22 +1,3 @@
-# search.py
-# ---------------
-# Licensing Information:  You are free to use or extend this projects for
-# educational purposes provided that (1) you do not distribute or publish
-# solutions, (2) you retain this notice, and (3) you provide clear
-# attribution to the University of Illinois at Urbana-Champaign
-#
-# Created by Michael Abir (abir2@illinois.edu) on 08/28/2018
-
-"""
-This is the main entry point for MP1. You should only modify code
-within this file -- the unrevised staff files will be used for all other
-files and classes when code is run, so be careful to not modify anything else.
-"""
-# Search should return the path.
-# The path should be a list of tuples in the form (row, col) that correspond
-# to the positions of the path taken by your search algorithm.
-# maze is a Maze object based on the maze from the file specified by input filename
-# searchMethod is the search method specified by --method flag (bfs,dfs,astar,astar_multi,extra)
 from collections import deque
 import sys
 import maze
@@ -34,9 +15,7 @@ def search(maze, searchMethod):
 def bfs(maze):
     """
     Runs BFS for part 1 of the assignment.
-
     @param maze: The maze to execute the search on.
-
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
@@ -70,9 +49,7 @@ def bfs(maze):
 def astar(maze):
     """
     Runs A star for part 1 of the assignment.
-
     @param maze: The maze to execute the search on.
-
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
@@ -141,77 +118,81 @@ def astar(maze):
                 
 
 
-def path_finder(start_point,objective_point,maze):
-    path=deque()
-    explored=deque()
-    parent={}
-    gdist={}
-    hdist={}
-    fdist={}
-    def heruistic_corner(point1,point2):
-        return max((point1[0]-point2[0]),abs(point1[1]-point2[1]))
-    gdist[start_point]=0
-    hdist[start_point]=heruistic_corner(start_point,objective_point)
-    fdist[start_point]=gdist[start_point]+hdist[start_point]
-    frontier=deque()
-    frontier.append(start_point)
-    while frontier:
-        #print('frontier=',frontier)
-        V=frontier.popleft()
-        if V in explored:
-            V=frontier.popleft()
-        #    print('enter explored')
-        if V==objective_point:#objective in the form of [(5,1)]
-            explored.append(V)
-            frontier=frontier
-        #    print('BEFORE ELSE V=',V)
-            break    
-        else:
-        #    print('V=',V)
-            for i in maze.getNeighbors(V[0],V[1]):
-                if maze.isValidMove(i[0],i[1])==True and i not in explored:#can lead to infinite loop
-                    frontier.append(i)
-                    parent[i]=V#key is son,value is parent
-        #        print('frontier in i loop',frontier)
-            explored.append(V)
-        #    print('explored',explored)
-    #print('finish while')
-    a=objective_point
-    path.append(a)
-    while start_point not in path:
-        path.appendleft(parent[a])
-        a=parent[a]
-    #print('list path=',path)
-    return list(path)
-
-
 
 def astar_corner(maze):
     """
     Runs A star for part 2 of the assignment in the case where there are four corner objectives.
-
     @param maze: The maze to execute the search on.
-
     @return path: a list of tuples containing the coordinates of each state in the computed path
         """
     # TODO: Write your code here
-    start=maze.getStart()
-    objective=maze.getObjectives()
+    start_point=maze.getStart()
+    objective_lists=maze.getObjectives()#objective is a list
     fullpath=deque()
-    i=1
-    print('start=',start)
-    print('objectives are',objective)
-    while objective:
-        path=path_finder(start,objective.pop(),maze)# IT IS IN LIST FORM
-        #print('while loop path',path)
-        if i==1:
+    counter=1
+    print('start=',start_point)
+    print('objectives are',objective_lists)
+    def heuristic_objectives(start,objectivelist):#return an objective following the heuristic out of the whole list
+        temp=list()
+        for i in objectivelist:
+            temp.append(abs(start[0]-i[0])+abs(start[1]-i[1]))
+        threshold=min(temp)
+        return threshold
+    while objective_lists:# objectlist is not empty
+        path=deque()
+        explored=deque()
+        parent={}
+        gdist={}
+        hdist={}
+        fdist={}
+        gdist[start_point]=0
+        hdist[start_point]=heuristic_objectives(start_point,objective_lists)
+        fdist[start_point]=gdist[start_point]+hdist[start_point]
+        frontier=deque()
+        frontier.append(start_point)
+        # for a single path 
+        while frontier:
+            V=frontier.popleft()
+            if V in explored:
+                V=frontier.popleft()
+            if V in objective_lists:#objective in the form of [(5,1)]
+                explored.append(V)
+                objective_lists.remove(V)
+                #last element in explored is the objective in this path
+                break    
+            else:
+                for i in maze.getNeighbors(V[0],V[1]):
+                    if maze.isValidMove(i[0],i[1])==True and i not in explored:#can lead to infinite loop
+                        temphdist=heuristic_objectives(i,objective_lists)
+                        tempgdist=gdist[V]+1#current cost to i(successor)
+                        if i in frontier and fdist[i]<tempgdist+temphdist:
+                            continue
+                        else:
+                            fdist[i]=temphdist+tempgdist
+                            hdist[i]=temphdist
+                            gdist[i]=tempgdist
+                            frontier.append(i)
+                            parent[i]=V#key is son,value is parent
+                            Last=V
+                explored.append(V)
+        #print('start point=',start_point)
+        a=explored[-1]
+        path.appendleft(a)
+        while start_point not in path:
+            a=parent[a]
+            path.appendleft(a)
+        #print('a=',a)
+        #print('path=',path)
+        start_point=explored[-1]
+        if counter==1:
             fullpath+=path
         else:
-            fullpath+=path[1:]
-        #print('fullpath',fullpath)
-        start=fullpath[-1]
-        i+=1
-    print('fullpath=',fullpath)
+            path.remove(a)
+       #     print('path to +',path)
+            fullpath+=path
+        counter+=1
+       # print('counter=',counter)
+       # print('fullpath',fullpath)
     return list(fullpath)
 
 
@@ -221,9 +202,7 @@ def astar_multi(maze):
     """
     Runs A star for part 3 of the assignment in the case where there are
     multiple objectives.
-
     @param maze: The maze to execute the search on.
-
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
@@ -233,9 +212,7 @@ def astar_multi(maze):
 def extra(maze):
     """
     Runs extra credit suggestion.
-
     @param maze: The maze to execute the search on.
-
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     # TODO: Write your code here
