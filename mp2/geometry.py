@@ -13,8 +13,7 @@ This file contains geometry functions that relate with Part1 in MP2.
 
 import math
 import numpy as np
-from const import *
-
+from const import*
 def computeCoordinate(start, length, angle):
     """Compute the end cooridinate based on the given start position, length and angle.
 
@@ -36,12 +35,7 @@ def computeCoordinate(start, length, angle):
     Y_end=Y_origin-delta_Y
     return (X_end,Y_end)
 
-def linecircleintersect(start_x,start_y,end_x,end_y,circle_x,circle_y,radius):#follow code in https://stackoverflow.com/questions/30844482/what-is-most-efficient-way-to-find-the-intersection-of-a-line-and-a-circle-in-py
-    (x1, y1), (x2, y2) = (start_x - circle_x, start_y - circle_y), (end_x - circle_x, end_y - circle_y)
-    dx,dy=(x2 - x1), (y2 - y1)
-    dr = math.sqrt(dx**2+dy**2)
-    determinant = x1 * y2 - x2 * y1
-    discriminant=(radius**2)*(dr**2)-determinant**2
+def judge_determinant(start_x,start_y,end_x,end_y,circle_x,circle_y,dx,dy,dr,determinant,discriminant):
     if discriminant<0:
         return False
     else:
@@ -50,12 +44,46 @@ def linecircleintersect(start_x,start_y,end_x,end_y,circle_x,circle_y,radius):#f
              circle_y + (-determinant * dx + sign * abs(dy) * discriminant**.5) / dr ** 2)
             for sign in ((1, -1) if dy < 0 else (-1, 1))] 
         vector_line=(end_x-start_x,end_y-start_y)
-        intersection1=(intersections[0][0]-start_x,intersections[0][1]-start_y)
-        intersection2=(intersections[1][0]-start_x,intersections[1][1]-start_y)
-        if ((0<=intersection1[0]/vector_line[0]<=1) and (0<=intersection1[1]/vector_line[1]<=1)) or ((0<=intersection2[0]/vector_line[0]<=1) and (0<=intersection2[1]/vector_line[1]<=1)):
-            return True
-        else:
-            return False
+        delta_x_line=vector_line[0]
+        delta_y_line=vector_line[1]
+        delta_x_intersection1=intersections[0][0]-start_x
+        delta_x_intersection2=intersections[1][0]-start_x
+        delta_y_intersection1=intersections[0][1]-start_y
+        delta_y_intersection2=intersections[1][1]-start_y
+        if delta_y_line!=0 and delta_x_line!=0:
+            if (0<=delta_x_intersection1/delta_x_line<=1 and 0<=delta_y_intersection1/delta_y_line<=1) or (0<=delta_x_intersection2/delta_x_line<=1 and 0<=delta_y_intersection2/delta_y_line<=1):
+                return True
+            else:
+                return False
+        elif delta_x_line==0 and delta_y_line!=0:#0 in denominator case the nominator must be 0
+            if (delta_x_intersection1==0 and 0<=delta_y_intersection1/delta_y_line<=1) or (delta_x_intersection2==0 and 0<=delta_y_intersection2/delta_y_line<=1):
+                return True
+            else:
+                return False
+        elif delta_x_line!=0 and delta_y_line==0:####change
+            if (0<=delta_x_intersection1/delta_x_line<=1 and delta_y_intersection1==0) or (0<=delta_x_intersection2/delta_x_line<=1 and delta_y_intersection2==0):
+                return True
+            else:
+                return False
+        elif delta_x_line==0 and delta_y_line==0:
+            if (delta_x_intersection1==0   and delta_y_intersection1==0) or (delta_x_intersection1 and delta_y_intersection2==0):
+                return True
+            else:
+                return False
+
+def linecircleintersect(start_x,start_y,end_x,end_y,padding_dist,circle_x,circle_y,radius):#follow code in https://stackoverflow.com/questions/30844482/what-is-most-efficient-way-to-find-the-intersection-of-a-line-and-a-circle-in-py
+    (x1, y1), (x2, y2) = (start_x - circle_x, start_y - circle_y), (end_x - circle_x, end_y - circle_y)
+    dx,dy=(x2 - x1), (y2 - y1)
+    dr = math.sqrt(dx**2+dy**2)
+    determinant = x1 * y2 - x2 * y1
+    discriminant=(radius**2)*(dr**2)-determinant**2#not padding distance
+    result_nopadding=judge_determinant(start_x,start_y,end_x,end_y,circle_x,circle_y,dx,dy,dr,determinant,discriminant)
+    radius1=radius+padding_dist
+    radius2=radius-padding_dist
+    discriminant1=(radius1**2)*(dr**2)-determinant**2
+    discriminant2=(radius2**2)*(dr**2)-determinant**2
+    result_padding=judge_determinant(start_x,start_y,end_x,end_y,circle_x,circle_y,dx,dy,dr,determinant,discriminant1) or judge_determinant(start_x,start_y,end_x,end_y,circle_x,circle_y,dx,dy,dr,determinant,discriminant2)
+    return result_nopadding or result_padding
 def doesArmTouchObjects(armPosDist, objects, isGoal=False):
     """Determine whether the given arm links touch any obstacle or goal
 
@@ -69,7 +97,7 @@ def doesArmTouchObjects(armPosDist, objects, isGoal=False):
             True if touched. False if not.
     """
     result=[]
-    for armPos in armPosDist: # armPoS IN ((100, 100), (135, 110), 4) FORM 
+    for armPos in armPosDist: # armPoS IN ((100, 100), (135, 110), 4) FORM #single link
         start=armPos[0]
         start_x=start[0]
         start_y=start[1]
@@ -78,36 +106,34 @@ def doesArmTouchObjects(armPosDist, objects, isGoal=False):
         end_y=end[1]
         pad_dist=armPos[2]
         for each_objects in objects:
-            each_objects_x=objects[0][0]#i[0] IN FORM (120, 100, 5)
-            each_objects_y=objects[0][1]
-            each_objects_r=objects[0][2]
+            each_objects_x=each_objects[0]#i[0] IN FORM (120, 100, 5)
+            each_objects_y=each_objects[1]
+            each_objects_r=each_objects[2]
+    #parameters are correct @10:36/2/13
             distance1=math.sqrt((start_x-each_objects_x)**2+(start_y-each_objects_y)**2)
             distance2=math.sqrt((end_x-each_objects_x)**2+(end_y-each_objects_y)**2)
+           # print('distance1=',distance1,'distance2=',distance2)
             if distance1<= each_objects_r or distance2<= each_objects_r:
-                #line inside the object
+                # one line end inside the object
                 result.append(1)
             else:
         #check whether the line intersects the circle http://mathworld.wolfram.com/Circle-LineIntersection.html and code in https://stackoverflow.com/questions/30844482/what-is-most-efficient-way-to-find-the-intersection-of-a-line-and-a-circle-in-py
                 if isGoal==True:
-                    intersect=linecircleintersect(start_x,start_y,end_x,end_y,each_objects_x,each_objects_y,each_objects_r)#boolean
-                    result.append(intersect)
-                else:#not goal case need to consider padding distance
-                    # not with padding distance contacts
-                    intersect=linecircleintersect(start_x,start_y,end_x,end_y,each_objects_x,each_objects_y,each_objects_r)#boolean
+                    intersect=linecircleintersect(start_x,start_y,end_x,end_y,0,each_objects_x,each_objects_y,each_objects_r)#boolean
                     if intersect==True:
                         result.append(1)
                     else:
-                        intersect2=linecircleintersect(start_x,start_y,end_x,end_y,each_objects_x,each_objects_y,each_objects_r+pad_dist)#boolean
-                        intersect3=linecircleintersect(start_x,start_y,end_x,end_y,each_objects_x,each_objects_y,each_objects_r-pad_dist)#boolean
-                        if intersect2==True or intersect3==True:
-                            result.append(1)
-                        else:
-                            result.append(0)
+                        result.append(0)
+                else:#not goal case need to consider padding distance not with padding distance contacts
+                    intersect=linecircleintersect(start_x,start_y,end_x,end_y,pad_dist,each_objects_x,each_objects_y,each_objects_r)#boolean
+                    if intersect==True:
+                        result.append(1)
+                    else:
+                        result.append(0)
     if sum(result)>0:
         return True
     else:
         return False
-
 def doesArmTipTouchGoals(armEnd, goals):
     """Determine whether the given arm tip touch goals
 
@@ -124,8 +150,14 @@ def doesArmTipTouchGoals(armEnd, goals):
         r=goal[2]
         distance=math.sqrt((dx)**2+(dy)**2)
         if distance>r:
-            return False
-    return True
+            result.append(0)
+        else:
+            result.append(1)
+    if sum(result)>0:
+        return True
+    else:
+        return False
+
 
 
 def isArmWithinWindow(armPos, window):
@@ -173,11 +205,11 @@ if __name__ == '__main__':
     for testArmPosDist in testArmPosDists:
         for testObstacle in testObstacles:
             testResults.append(doesArmTouchObjects([testArmPosDist], testObstacle, isGoal=True))
-         #   print('isGoal=true case',testArmPosDist,'obstacled tested',testObstacle)
-         #   print(doesArmTouchObjects([testArmPosDist], testObstacle, isGoal=True))
-    print('testResults= line159',testResults)
-
+           # print('isGoal=true case',testArmPosDist,'obstacled tested',testObstacle)
+           # print(doesArmTouchObjects([testArmPosDist], testObstacle, isGoal=True))
+    #print('testResults= line159',testResults)
     assert resultDoesArmTouchObjects == testResults
+    print("old Test passed\n")
 
     testArmEnds = [(100, 100), (95, 95), (90, 90)]
     testGoal = [(100, 100, 10)]
@@ -195,5 +227,7 @@ if __name__ == '__main__':
             testResults.append(isArmWithinWindow([testArmPos], testWindow))
     #print('testResults= line193',testResults)
     assert resultIsArmWithinWindow == testResults
+    newResult=[]
+    newobstacles=[[(70, 50, 15)], [(140, 30, 17)], [(115, 75, 17)]]
+    newarmPosDist= [((150, 190), (196, 102), 5), ((196, 102), (122, 73), 1),((150, 190), (174, 93), 5), ((174, 93), (95, 82), 1),((150, 190), (156, 91), 5), ((156, 91), (77, 93), 1)]
 
-    print("Test passed\n")

@@ -27,6 +27,15 @@ def search(maze, searchMethod):
     }.get(searchMethod, [])(maze)
 
 def bfs(maze):
+    from collections import deque
+from heapq import heappop, heappush
+
+def search(maze, searchMethod):
+    return {
+        "bfs": bfs,
+    }.get(searchMethod, [])(maze)
+
+def bfs(maze):
     # Write your code here
     """
     This function returns optimal path in a list, which contains start and objective.
@@ -40,20 +49,22 @@ def bfs(maze):
     frontier.append(start)
     parent={}
     while frontier:
-        V=frontier.pop()
-        if V==objective[0]:#objective in the form of [(5,1)]
+        V=frontier.popleft()
+        if V in explored:
+            V=frontier.popleft()
+        #if V==objective[0]:#objective in the form of [(5,1)]#works @16:04
+        if V in objective:
             explored.append(V)
             break    
         else:
             for i in set(maze.getNeighbors(V[0],V[1])):
-                if maze.isValidMove(i[0],i[1])==True and i not in explored :#can lead to infinite loop#and i not in explored
+                if maze.isValidMove(i[0],i[1])==True and i not in explored:#can lead to infinite loop
                     frontier.append(i)
                     parent[i]=V#key is son,value is parent
             explored.append(V)
-    a=objective[0]
+    a=V
     path.append(a)
     while start not in path:
         path.appendleft(parent[a])
         a=parent[a]
-    return []
-#    list(path)
+    return list(path)
